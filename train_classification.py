@@ -59,8 +59,8 @@ all_dataset = DogCatDataset('D:/dataset/cat-and-dog/', transform=data_transforms
 train_size = int(0.8 * len(all_dataset))
 val_size = len(all_dataset) - train_size
 train_dataset, val_dataset = random_split(all_dataset, [train_size, val_size])
-train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
+train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True,num_workers=4)
+val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False,num_workers=2)
 device = 'cuda'
 
 model = torchvision.models.resnet18(pretrained=True)
@@ -115,4 +115,6 @@ def train_model(model, criterion, optimizer, num_epochs=25):
         print()
 
     return model
-model = train_model(model, criterion, optimizer, num_epochs=15)
+if __name__ == '__main__':
+    
+    model = train_model(model, criterion, optimizer, num_epochs=15)
