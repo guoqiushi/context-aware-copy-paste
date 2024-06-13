@@ -2,12 +2,12 @@ from transformers import BlipProcessor, BlipForConditionalGeneration
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 from segment_anything import SamPredictor,sam_model_registry
-import time
 from PIL import Image
 import random
 import torch
 import glob
 import cv2
+import os
 import numpy as np
 
 path = 'models/yolov5m_Objects365.pt'
@@ -28,22 +28,47 @@ class contextAwareTool:
         # self.obj365_labels = self._get_obj365_labels()
 
     def copy_paste(self,base_image_path):
-        category =self._get_most_relevent_category(base_image_path)
+        category = self._get_most_relevent_category(base_image_path)
         print(category)
         target_img_list = glob.glob('D:/dataset/obj365/{}/*.png'.format(category)) + glob.glob(
             'D:/dataset/obj365/{}/*.jpg'.format(category))
         target_img_path = random.choice(target_img_list)
-        target_mask, bbox = tool._get_segmentation_given_category(target_img_path)
+        target_mask, bbox = self._get_segmentation_given_category(target_img_path)
         x1, y1, x2, y2 = bbox
         target_img = cv2.imread(target_img_path)
         base_img = cv2.imread(base_image_path)
+        h_b, w_b, _ = base_img.shape
         h_t, w_t, _ = target_img.shape
-        upper_left = [100, 100]
-        for i in range(y1, y2):
-            for j in range(x1, x2):
-                if target_mask[i, j] == 1:
-                    base_img[upper_left[1] + i, upper_left[0] + j] = target_img[i, j]
+        upper_left = [30, 30]
+        max_h = h_b - upper_left[1]
+        max_w = w_b - upper_left[0]
+        resized_w = max_w - 10
+        resized_h = int(h_t * (resized_w / w_t)) - 10
+        resized_target_img = cv2.resize(target_img, (resized_w, resized_h))
+        resized_target_mask = cv2.resize(target_mask, (resized_w, resized_h))
+        for i in range(resized_h):
+            for j in range(resized_w):
+                if resized_target_mask[i, j] == 1:
+                    base_img[upper_left[1] + i, upper_left[0] + j] = resized_target_img[i, j]
         return base_img
+
+    # def copy_paste(self,base_image_path):
+    #     category =self._get_most_relevent_category(base_image_path)
+    #     print(category)
+    #     target_img_list = glob.glob('D:/dataset/obj365/{}/*.png'.format(category)) + glob.glob(
+    #         'D:/dataset/obj365/{}/*.jpg'.format(category))
+    #     target_img_path = random.choice(target_img_list)
+    #     target_mask, bbox = self._get_segmentation_given_category(target_img_path)
+    #     x1, y1, x2, y2 = bbox
+    #     target_img = cv2.imread(target_img_path)
+    #     base_img = cv2.imread(base_image_path)
+    #     h_t, w_t, _ = target_img.shape
+    #     upper_left = [100, 100]
+    #     for i in range(y1, y2):
+    #         for j in range(x1, x2):
+    #             if target_mask[i, j] == 1:
+    #                 base_img[upper_left[1] + i, upper_left[0] + j] = target_img[i, j]
+    #     return base_img
 
 
     def _get_segmentation_given_category(self, img_path):
